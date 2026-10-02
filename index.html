@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة حُفّاظ المتقدمة - قياس مستوى حفظ القرآن الكريم</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        .drag-word { cursor: pointer; transition: all 0.2s; }
+        .drag-word:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between transition-colors duration-500">
+
+    <!-- الهيدر -->
+    <header class="p-4 border-b border-slate-700 flex flex-wrap justify-between items-center bg-slate-800 gap-4">
+        <h1 class="text-2xl font-bold text-emerald-400 flex items-center gap-2">
+            <span>📖</span> منصة حُفّاظ الشاملة
+        </h1>
+        <div class="flex items-center gap-3">
+            <span id="score-display" class="bg-emerald-900 border border-emerald-500 text-emerald-300 px-4 py-1.5 rounded-full text-sm font-bold">
+                النقاط: 0 ✨
+            </span>
+            <button id="kids-btn" onclick="setTheme('kids')" class="px-4 py-1.5 bg-yellow-500 text-slate-900 rounded-full font-bold hover:bg-yellow-400 transition text-sm">وضع الأطفال 🎈</button>
+            <button id="adults-btn" onclick="setTheme('adults')" class="px-4 py-1.5 bg-emerald-600 text-white rounded-full font-bold hover:bg-emerald-500 transition text-sm">وضع الكبار 🕌</button>
+        </div>
+    </header>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="container mx-auto p-4 max-w-3xl my-auto">
+        
+        <div id="quiz-card" class="bg-slate-800 p-6 md:p-8 rounded-2xl shadow-2xl border border-slate-700 transition-all">
+            <h2 id="mode-title" class="text-xl font-bold text-slate-200 mb-6 text-center">اختر السورة ونوع الاختبار لتقييم حفظك:</h2>
+            
+            <!-- القوائم والإعدادات -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm mb-2 text-slate-400">السورة المطلوبة:</label>
+                    <select id="surah-select" class="w-full p-3 rounded-xl bg-slate-700 text-white border border-slate-600 focus:outline-none focus:border-emerald-500">
+                        <option value="">جاري تحميل السور...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm mb-2 text-slate-400">القارئ (للاختبارات الصوتية):</label>
+                    <select id="reciter-select" class="w-full p-3 rounded-xl bg-slate-700 text-white border border-slate-600 focus:outline-none focus:border-emerald-500">
+                        <option value="7">مشاري العفاسي</option>
+                        <option value="2">أبو بكر الشاطري</option>
+                        <option value="6">محمود خليل الحصري</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- خيارات الأسئلة المتنوعة -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                <button onclick="startFillQuiz()" class="p-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-sm transition flex flex-col items-center gap-1">
+                    <span>✍️</span> اكمل الآية
+                </button>
+                <button onclick="startOrderQuiz()" class="p-3 bg-amber-600 hover:bg-amber-500 rounded-xl font-bold text-sm transition flex flex-col items-center gap-1">
+                    <span>🧩</span> رتّب الكلمات
+                </button>
+                <button onclick="startSurahGuessQuiz()" class="p-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-bold text-sm transition flex flex-col items-center gap-1">
+                    <span>🎧</span> خَمّن السورة
+                </button>
+                <button onclick="startVoiceQuiz()" class="p-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-sm transition flex flex-col items-center gap-1">
+                    <span>🎙️️</span> التسميع الصوتي
+                </button>
+                <button onclick="startNextVerseQuiz()" class="p-3 bg-teal-600 hover:bg-teal-500 rounded-xl font-bold text-sm transition flex flex-col items-center gap-1 col-span-2 md:col-span-2">
+                    <span>🎯</span> اختيار الآية التالية (للمتقنين)
+                </button>
+            </div>
+
+            <!-- منطقة السؤال والتفاعل -->
+            <div id="question-area" class="hidden p-6 bg-slate-900 rounded-xl border border-slate-700 relative">
+                <div id="loader" class="hidden text-center py-4 text-emerald-400 font-bold">جاري إعداد السؤال...</div>
+                
+                <div id="question-content">
+                    <p id="question-title" class="text-xs text-emerald-400 mb-2 font-bold uppercase tracking-wider"></p>
+                    <div id="audio-player-container" class="mb-4 hidden text-center">
+                        <audio id="quran-audio" controls class="mx-auto"></audio>
+                    </div>
+                    <p id="question-text" class="text-xl md:text-2xl font-bold mb-6 text-slate-100 leading-relaxed text-center"></p>
+                    
+                    <div id="interactive-box" class="space-y-4"></div>
+                    <p id="feedback" class="mt-4 font-bold text-center text-lg"></p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="p-4 text-center text-slate-500 text-xs border-t border-slate-800">
+        مشروع حُفّاظ المطور © 2026 - مفتوح المصدر ومجاني بالكامل
+    </footer>
+
+    <script>
+        const API_BASE = "https://api.quran.com/api/v4";
+        let score = 0;
+        let currentAnswers = [];
+
+        // 1. تحميل قائمة السور
+        async function fetchSurahs() {
+            try {
+                const res = await fetch(`${API_BASE}/chapters?language=ar`);
+                const data = await res.json();
+                const select = document.getElementById('surah-select');
+                select.innerHTML = '<option value="">-- اختر سورة لتنفيذ الاختبار --</option>';
+                data.chapters.forEach(s => {
+                    select.innerHTML += `<option value="${s.id}">${s.id}. سورة ${s.name_arabic} (${s.verses_count} آية)</option>`;
+                });
+            } catch (e) {
+                alert("تعذر جلب بيانات القرآن، تحقق من الاتصال بالإنترنت.");
+            }
+        }
+
+        // 2. تغيير المظهر (اطفال / كبار)
+        function setTheme(mode) {
+            const card = document.getElementById('quiz-card');
+            const title = document.getElementById('mode-title');
+            if (mode === 'kids') {
+                document.body.className = "bg-amber-100 text-slate-800 min-h-screen flex flex-col justify-between transition-colors";
+                card.className = "bg-white p-6 md:p-8 rounded-3xl shadow-2xl border-4 border-yellow-400";
+                title.innerText = "🎈 مرحباً بك يا بطل القرآن! اختر السورة ونوع التحدي:";
+            } else {
+                document.body.className = "bg-slate-900 text-white min-h-screen flex flex-col justify-between transition-colors";
+                card.className = "bg-slate-800 p-6 md:p-8 rounded-2xl shadow-2xl border border-slate-700";
+                title.innerText = "اختر السورة ونوع الاختبار لتقييم حفظك:";
+            }
+        }
+
+        function showLoader(show) {
+            document.getElementById('loader').classList.toggle('hidden', !show);
+            document.getElementById('question-content').classList.toggle('hidden', show);
+            document.getElementById('question-area').classList.remove('hidden');
+            document.getElementById('feedback').innerText = "";
+            document.getElementById('audio-player-container').classList.add('hidden');
+        }
+
+        function addScore(points) {
+            score += points;
+            document.getElementById('score-display').innerText = `النقاط: ${score} ✨`;
+        }
+
+        // --- نوع 1: أكمل الكلمة الناقصة ---
+        async function startFillQuiz() {
+            const surahId = document.getElementById('surah-select').value;
+            if(!surahId) return alert("يرجى اختيار سورة أولاً");
+            showLoader(true);
+
+            const res = await fetch(`${API_BASE}/quran/verses/uthmani?chapter_number=${surahId}`);
+            const data = await res.json();
+            const verses = data.verses;
+            const verse = verses[Math.floor(Math.random() * verses.length)];
+            const words = verse.text_uthmani.split(" ");
+
+            if(words.length < 3) return startFillQuiz();
+
+            const targetIdx = Math.floor(Math.random() * words.length);
+            const targetWord = words[targetIdx];
+            words[targetIdx] = " ( ... ) ";
+
+            showLoader(false);
+            document.getElementById('question-title').innerText = "اختبار: أكمل الكلمة الناقصة";
+            document.getElementById('question-text').innerText = words.join(" ");
+            
+            const box = document.getElementById('interactive-box');
+            box.innerHTML = `
+                <input type="text" id="fill-input" placeholder="اكتب الكلمة الناقصة هنا" class="w-full p-3 text-center text-slate-900 text-lg rounded-xl border-2 border-emerald-500 focus:outline-none">
+                <button onclick="checkFillAnswer('${targetWord}')" class="w-full py-3 bg-emerald-600 font-bold rounded-xl hover:bg-emerald-500 transition">تأكيد الإجابة</button>
+            `;
+        }
+
+        function checkFillAnswer(correct) {
+            const val = document.getElementById('fill-input').value.trim();
+            const fb = document.getElementById('feedback');
+            if(val === correct || correct.includes(val)) {
+                fb.className = "mt-4 font-bold text-center text-lg text-emerald-400";
+                fb.innerText = "✨ أحسنت! إجابة صحيحة +10 نقاط";
+                addScore(10);
+            } else {
+                fb.className = "mt-4 font-bold text-center text-lg text-rose-400";
+                fb.innerText = `❌ إجابة خاطئة. الكلمة الصحيحة هي: (${correct})`;
+            }
+        }
+
+        // --- نوع 2: ترتيب كلمات الآية (أطفال) ---
+        async function startOrderQuiz() {
+            const surahId = document.getElementById('surah-select').value;
+            if(!surahId) return alert("يرجى اختيار سورة أولاً");
+            showLoader(true);
+
+            const res = await fetch(`${API_BASE}/quran/verses/uthmani?chapter_number=${surahId}`);
+            const data = await res.json();
+            const verses = data.verses;
+            // اختيار آية قصيرة
+            const verse = verses.find(v => v.text_uthmani.split(" ").length <= 7) || verses[0];
+            const originalWords = verse.text_uthmani.split(" ");
+            
+            // بعثرة الكلمات
+            let shuffled = [...originalWords].sort(() => Math.random() - 0.5);
+            currentAnswers = [];
+
+            showLoader(false);
+            document.getElementById('question-title').innerText = "اختبار الترتيب: اضغط على الكلمات بالترتيب الصحيح";
+            document.getElementById('question-text').innerText = "رتب آيات الله لتتكون الآية الصحيحة:";
+            
+            const box = document.getElementById('interactive-box');
+            box.innerHTML = `
+                <div id="user-built-sentence" class="p-4 min-h-[60px] bg-slate-800 border-2 border-dashed border-emerald-500 rounded-xl text-center text-lg font-bold text-emerald-300 mb-4"></div>
+                <div id="word-pool" class="flex flex-wrap gap-2 justify-center"></div>
+                <button onclick="checkOrderAnswer('${originalWords.join(" ")}')" class="w-full py-3 bg-amber-600 font-bold rounded-xl hover:bg-amber-500 transition mt-4">تحقق من الترتيب</button>
+            `;
+
+            const pool = document.getElementById('word-pool');
+            shuffled.forEach((word, idx) => {
+                pool.innerHTML += `<button id="btn-word-${idx}" onclick="pickWord('${word}', 'btn-word-${idx}')" class="drag-word px-4 py-2 bg-slate-700 text-slate-100 rounded-lg border border-slate-600">${word}</button>`;
+            });
+        }
+
+        function pickWord(word, btnId) {
+            currentAnswers.push(word);
+            document.getElementById('user-built-sentence').innerText = currentAnswers.join(" ");
+            document.getElementById(btnId).classList.add('opacity-30', 'pointer-events-none');
+        }
+
+        function checkOrderAnswer(correctSentence) {
+            const userSentence = currentAnswers.join(" ");
+            const fb = document.getElementById('feedback');
+            if(userSentence === correctSentence) {
+                fb.className = "mt-4 font-bold text-center text-lg text-emerald-400";
+                fb.innerText = "🎉 ممتاز جداً! ترتيبك صحيح +15 نقطة";
+                addScore(15);
+            } else {
+                fb.className = "mt-4 font-bold text-center text-lg text-rose-400";
+                fb.innerText = "❌ الترتيب غير صحيح، حاول مرة أخرى!";
+            }
+        }
+
+        // --- نوع 3: خَمّن اسم السورة من صوت الآية ---
+        async function startSurahGuessQuiz() {
+            showLoader(true);
+            const reciter = document.getElementById('reciter-select').value;
+            
+            // اختيار سورة عشوائية
+            const randomSurah = Math.floor(Math.random() * 114) + 1;
+            const res = await fetch(`${API_BASE}/verses/by_chapter/${randomSurah}?audio=${reciter}&per_page=5`);
+            const data = await res.json();
+            const verse = data.verses[Math.floor(Math.random() * data.verses.length)];
+
+            // جلب اسم السورة الصحيحة + 3 خيارات خاطئة
+            const surahRes = await fetch(`${API_BASE}/chapters?language=ar`);
+            const surahData = await surahRes.json();
+            const correctSurahName = surahData.chapters.find(c => c.id === randomSurah).name_arabic;
+            
+            let options = [correctSurahName];
+            while(options.length < 4) {
+                let r = surahData.chapters[Math.floor(Math.random() * 114)].name_arabic;
+                if(!options.includes(r)) options.push(r);
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            showLoader(false);
+            document.getElementById('question-title').innerText = "اختبار سماعي: استمع للمقطع وتعرف على السورة";
+            document.getElementById('question-text').innerText = "ما هي السورة التي تنتمي إليها هذه الآية؟";
+            
+            const audioComp = document.getElementById('quran-audio');
+            const audioBox = document.getElementById('audio-player-container');
+            audioComp.src = `https://verses.quran.com/${verse.audio.url}`;
+            audioBox.classList.remove('hidden');
+
+            const box = document.getElementById('interactive-box');
+            box.innerHTML = `<div class="grid grid-cols-2 gap-3"></div>`;
+            const grid = box.querySelector('div');
+
+            options.forEach(opt => {
+                grid.innerHTML += `<button onclick="checkSurahGuess('${opt}', '${correctSurahName}')" class="p-4 bg-slate-700 hover:bg-emerald-600 font-bold rounded-xl transition text-center">${opt}</button>`;
+            });
+        }
+
+        function checkSurahGuess(selected, correct) {
+            const fb = document.getElementById('feedback');
+            if(selected === correct) {
+                fb.className = "mt-4 font-bold text-center text-lg text-emerald-400";
+                fb.innerText = "🎉 أحسنت! إجابة صحيحة +20 نقطة";
+                addScore(20);
+            } else {
+                fb.className = "mt-4 font-bold text-center text-lg text-rose-400";
+                fb.innerText = `❌ إجابة خاطئة، هذه السورة هي: سورة ${correct}`;
+            }
+        }
+
+        // --- نوع 4: التسميع الصوتي المباشر ---
+        function startVoiceQuiz() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                return alert("متصفحك لا يدعم التعرف على الصوت. يُرجى فتح الموقع عبر متصفح Google Chrome.");
+            }
+            document.getElementById('question-area').classList.remove('hidden');
+            document.getElementById('question-title').innerText = "التسميع الصوتي المباشر";
+            document.getElementById('question-text').innerText = "اضغط المايك واقرأ ما تحفظه بوضوح:";
+            
+            const box = document.getElementById('interactive-box');
+            box.innerHTML = `
+                <div class="text-center">
+                    <button id="mic-btn" onclick="listenVoice()" class="p-6 bg-rose-600 hover:bg-rose-500 rounded-full text-white font-bold text-xl transition animate-pulse">
+                        🎙️ اضغط هنا وابدأ التسميع
+                    </button>
+                    <p id="speech-result" class="mt-4 text-emerald-300 font-bold text-lg italic min-h-[30px]"></p>
+                </div>
+            `;
+        }
+
+        function listenVoice() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const rec = new SpeechRecognition();
+            rec.lang = 'ar-SA';
+            
+            const btn = document.getElementById('mic-btn');
+            const resText = document.getElementById('speech-result');
+
+            btn.innerText = "🎧 جاري الاستماع لقراءتك...";
+            rec.start();
+
+            rec.onresult = function(e) {
+                const text = e.results[0][0].transcript;
+                resText.innerText = `ما تم التقاطه: "${text}"`;
+                btn.innerText = "🎙️ اضغط للتسميع مرة أخرى";
+                addScore(5);
+            };
+
+            rec.onerror = function() {
+                resText.innerText = "لم نتمكن من التمييز بوضوح، أعد المحاولة.";
+                btn.innerText = "🎙️ اضغط للتسميع مرة أخرى";
+            }
+        }
+
+        // --- نوع 5: ما هي الآية التالية؟ ---
+        async function startNextVerseQuiz() {
+            const surahId = document.getElementById('surah-select').value;
+            if(!surahId) return alert("يرجى اختيار سورة أولاً");
+            showLoader(true);
+
+            const res = await fetch(`${API_BASE}/quran/verses/uthmani?chapter_number=${surahId}`);
+            const data = await res.json();
+            const verses = data.verses;
+
+            if(verses.length < 2) return startNextVerseQuiz();
+
+            const randomIdx = Math.floor(Math.random() * (verses.length - 1));
+            const currentVerse = verses[randomIdx];
+            const nextVerse = verses[randomIdx + 1];
+
+            // اختيارات آيات خاطئة
+            let wrongOptions = verses.filter((_, idx) => idx !== randomIdx + 1).sort(() => Math.random() - 0.5).slice(0, 2);
+            let choices = [nextVerse.text_uthmani, ...wrongOptions.map(o => o.text_uthmani)].sort(() => Math.random() - 0.5);
+
+            showLoader(false);
+            document.getElementById('question-title').innerText = "اختبار الربط والتسلسل: ما هي الآية التالية؟";
+            document.getElementById('question-text').innerText = `الآية: "${currentVerse.text_uthmani}"`;
+
+            const box = document.getElementById('interactive-box');
+            box.innerHTML = `<div class="space-y-3"></div>`;
+            const container = box.querySelector('div');
+
+            choices.forEach(choice => {
+                container.innerHTML += `<button onclick="checkNextVerse('${choice}', '${nextVerse.text_uthmani}')" class="w-full p-4 bg-slate-700 hover:bg-teal-600 rounded-xl font-bold transition text-right leading-relaxed">${choice}</button>`;
+            });
+        }
+
+        function checkNextVerse(selected, correct) {
+            const fb = document.getElementById('feedback');
+            if(selected === correct) {
+                fb.className = "mt-4 font-bold text-center text-lg text-emerald-400";
+                fb.innerText = "✨ ممتاز جداً! ربط دقيق بين الآيات +15 نقطة";
+                addScore(15);
+            } else {
+                fb.className = "mt-4 font-bold text-center text-lg text-rose-400";
+                fb.innerText = `❌ إجابة خاطئة. الآية التالية هي: (${correct})`;
+            }
+        }
+
+        // بدء تشغيل الموقع
+        fetchSurahs();
+    </script>
+</body>
+</html>
